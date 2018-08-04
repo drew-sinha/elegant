@@ -441,6 +441,10 @@ class FluorMeasurements:
             # even if the file is cached in RAM. Strange but true.
             mask = worm_spline.lab_frame_mask(center_tck, width_tck, image.shape)
 
+        if mask.sum() == 0:
+            print(f'Mask for {position_root.name} at {timepoint} had no worm region defined.')
+            return [numpy.nan] * len(self.feature_names)
+
         mask = mask > 0
         image = image.astype(numpy.float32) * flatfield
         data, region_masks = measure_fluor.subregion_measures(image, mask)
