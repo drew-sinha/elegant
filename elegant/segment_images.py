@@ -122,6 +122,8 @@ def annotate_poses_from_masks(positions, mask_root, annotations, overwrite_exist
             the worm hatched at the first timepoint taken.
     """
     for position_name, timepoint_name, image_path in load_data.flatten_positions(positions):
+        print(f'Annotating poses for position {position_name}')
+
         mask_path = mask_root / position_name / (image_path.stem + '.png')
         position_annotations, timepoint_annotations = annotations.setdefault(position_name, ({}, {}))
         current_annotation = timepoint_annotations.setdefault(timepoint_name, {})
