@@ -93,6 +93,9 @@ def segment_experiment(experiment_root, model, channels='bf', use_gpu=True, over
         process = segment_images.segment_positions(positions, model, mask_root, use_gpu, overwrite_existing)
         if process.stderr:
             print(f'Errors during segmentation: {process.stderr}')
+        with (mask_root / 'notes.txt').open('a+') as notes_file:
+            notes_file.write(
+                f'{datetime.datetime.today().strftime("%Y-%m-%dt%H%M")} These masks were segmented with model {model}\n')
     else:
         print('No images found to segment.')
     annotations = load_data.read_annotations(experiment_root)
