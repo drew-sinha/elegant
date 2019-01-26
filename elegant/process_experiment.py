@@ -65,7 +65,7 @@ def compress_main(argv=None):
 
 def segment_experiment(experiment_root, model, channels='bf', use_gpu=True, overwrite_existing=False,
     timepoint_filter=None, mask_root=None):
-    """Segment all 'bf' image files from an experiment directory and annotate poses.
+    """Segment image files from an experiment directory and annotate poses.
 
     For more complex needs, use segment_images.segment_positions. This function
     is largely a simple example of its usage.
@@ -89,7 +89,12 @@ def segment_experiment(experiment_root, model, channels='bf', use_gpu=True, over
 
     experiment_root = pathlib.Path(experiment_root)
     positions = load_data.scan_experiment_dir(experiment_root, channels=channels, timepoint_filter=timepoint_filter)
-    segment_images.segment_positions(positions, model, mask_root, use_gpu, overwrite_existing)
+    if positions:
+        process = segment_images.segment_positions(positions, model, mask_root, use_gpu, overwrite_existing)
+        if process.stderr:
+            print(f'Errors during segmentation: {process.stderr}')
+    else:
+        print('No images found to segment.')
     annotations = load_data.read_annotations(experiment_root)
     metadata = load_data.read_metadata(experiment_root)
     age_factor = metadata.get('age_factor', 1) # see if there is an "age factor" stashed in the metadata...
