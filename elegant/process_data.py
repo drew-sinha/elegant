@@ -23,7 +23,42 @@ def update_annotations(experiment_root):
     update the annotations dictionaries with all relevant data that can be
     automatically extracted from the experiment acquisition metadata files.
     """
+    propagate_stages(experiment_root)
     annotate(experiment_root, [annotate_timestamps, annotate_z], [annotate_stage_pos])
+
+def propagate_stages(experiment_root,verbose=False):
+    """Modifies experiment annotations by propagating stage information forward in time across annotated timepoints.
+
+    This guards against the scenario in which a timepoint get acquired while one is annotating a death.
+    In this scenario, the latest timepoint never gets annotated.
+
+    Parameters:
+        experiment_root - the path to an experiment directory
+    """
+    annotations = load_data.read_annotations(experiment_root)
+    for position_name, (position_annotations, timepoint_annotations) in annotations.items():
+        running_stage = None
+        changed = []
+        encountered_stages = []
+
+        for timepoint,timepoint_info in timepoint_annotations.items():
+            already_encountered = timepoint_info.get('stage') in encountered_stages
+            stage_set = timepoint_info.get('stage') is not None
+
+            if running_stage is None: # Either first timepoint or all the annotations up to now are null
+                running_stage = timepoint_info.get('stage')
+            elif timepoint_info.get('stage') != running_stage and stage_set and not already_encountered:
+                running_stage = timepoint_info['stage']
+
+            if stage_set and not already_encountered:
+                encountered_stages.append(timepoint_info['stage'])
+
+            if not stage_set and running_stage is not None: # Also handles the case that we are working with an excluded position
+                timepoint_info['stage'] = running_stage
+            elif stage_set and timepoint_info['stage'] != running_stage and already_encountered:
+                timepoint_info['stage'] = running_stage
+
+    annotations = load_data.write_annotations(experiment_root, annotations)
 
 def annotate(experiment_root, annotators=[], position_annotators=[]):
     """Apply one or more measurement functions to produce annotations for manual review.
