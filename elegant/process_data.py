@@ -38,7 +38,6 @@ def propagate_stages(experiment_root,verbose=False):
     annotations = load_data.read_annotations(experiment_root)
     for position_name, (position_annotations, timepoint_annotations) in annotations.items():
         running_stage = None
-        changed = []
         encountered_stages = []
 
         for timepoint,timepoint_info in timepoint_annotations.items():
