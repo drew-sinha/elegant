@@ -64,7 +64,7 @@ def compress_main(argv=None):
     compress_pngs(**args.__dict__)
 
 def segment_experiment(experiment_root, model, channels='bf', use_gpu=True, overwrite_existing=False,
-    timepoint_filter=None, mask_root=None):
+    timepoint_filter=None, mask_dir=None):
     """Segment image files from an experiment directory and annotate poses.
 
     For more complex needs, use segment_images.segment_positions. This function
@@ -82,12 +82,13 @@ def segment_experiment(experiment_root, model, channels='bf', use_gpu=True, over
             mask files, nor will existing annotations be modified even if new
             mask files are generated for a timepoint.
         timepoint_filter - filter for scan_experiment_dir specifying timepoints to segment
-        mask_root - root directory for masks that will be used to updating annotations
+        mask_dir - subdirectory (under experiment_root) for masks that will be used to update annotations
     """
-    if mask_root is None:
-        mask_root = experiment_root / 'derived_data' / 'mask'
-
+    if mask_dir is None:
+        mask_dir = 'derived_data' / 'mask'
     experiment_root = pathlib.Path(experiment_root)
+    mask_root = experiment_root / mask_dir
+
     positions = load_data.scan_experiment_dir(experiment_root, channels=channels, timepoint_filter=timepoint_filter)
     if positions:
         process = segment_images.segment_positions(positions, model, mask_root, use_gpu, overwrite_existing)
