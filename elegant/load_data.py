@@ -246,6 +246,45 @@ def write_annotation_file(annotation_file, position_annotations, timepoint_annot
         # convert from  OrderedDict or defaultdict or whatever to plain dict for output
         pickle.dump((dict(position_annotations), dict(timepoint_annotations)), af)
 
+def append_annotations(experiment_root, position_diffs, annotation_dir='annotations'):
+    """Append to a set of annotation files from a positions diff dictionary
+    like that returned by diff_annotations().
+
+    Example:
+        annotations = read_annotations(experiment_root)
+        ref_annotations = annotations.copy()
+        # ... modify "annotations" (e.g. calculate poses)
+        position_diffs = diff_annotations(ref_annotations, new_annotations)
+        append_annotations(experiment_root, position_diffs)
+    """
+    annotation_root = pathlib.Path(experiment_root) / annotation_dir
+    for position_name, (position_diff, timepoint_diff) in position_diffs.items():
+        annotation_file = annotation_root / f'{position_name}.pickle'
+        append_annotation_file(annotation_file, position_diff, timepoint_diff)
+
+def append_annotation_file(annotation_file, position_diff, timepoint_diff):
+    """Append modifications to a single annotation file.
+
+    Parameters:
+        annotation_file: path to an existing annotation file
+        position_diff: diff as a dict of "global" per-position annotations to apply to current annotations;
+        timepoint_annotations: diff as an ordered dict mapping timepoint names to
+            annotation dictionaries (which map strings to annotation data)
+    """
+    annotation_file = pathlib.Path(annotation_file)
+    annotation_file.parent.mkdir(exist_ok=True)
+    while True:
+        try:
+            latest_annotations = read_annotation_file(annotation_file)
+            merge_annotations(latest_annotations, (position_annotations, timepoint_annotations))
+            with annotation_file.open('wb') as af:
+                fcntl.flock(af, fcntl.LOCK_EX)
+                pickle.dump((dict(latest_annotations[0]), dict(latest_annotations[1])), af)
+                fcntl.flock(af, fcntl.LOCK_UN)
+            break
+        except BlockingIOError:
+            time.sleep(1)
+
 def merge_annotations(positions, positions2):
     """Merge two position dictionaries (as returned by e.g. read_annotations).
 
@@ -256,6 +295,41 @@ def merge_annotations(positions, positions2):
         position_annotations.update(position_annotations2)
         for timepoint, annotations2 in timepoint_annotations2.items():
             timepoint_annotations.setdefault(timepoint, {}).update(annotations2)
+
+def diff_annotations(ref_annotations, new_annotations):
+    """Creates a diff between two sets of experiment annotations
+
+    Note that the difference is determined by fields that have been set in the new annotations;
+    thus, this difference will not reflect fields that have been removed in the new annotations.
+
+    Parameters:
+        ref_annotations - experiment annotation used for comparing changes against
+            (typically the original annotations used to generate "annotations")
+        new_annotations - annotations that have been updated with new values
+
+    Returns: an orderedDict mapping position_name to annotation diffs, where each set of
+        annotation_diffs is a tupe (position_diffs, timepoint_diffs) of relevant diffs
+        for either position or individual timepoint annotations, respectively
+    """
+
+    diff = {}
+    for position_name in new_annotations:
+        new_position_annotations, new_timepoint_annotations = new_annotations[position_name]
+        ref_position_annotations, ref_timepoint_annotations = ref_annotations[position_name]
+        pa_diff, ta_diff = {}, {}
+
+        for pa_field in new_position_annotations:
+            field_in_ref = pa_field in ref_position_annotations
+            if not field_in_ref or new_position_annotations[pa_field] != ref_position_annotations[pa_field]:
+                pa_diff[pa_field] = new_position_annotations[pa_field]
+
+        for timepoint_name in new_timepoint_annotations:
+            ta_diff[timepoint_name] = {}
+            for ta_diff in new_timepoint_annotations[timepoint_name]:
+                field_in_ref = ta_field not in ref_timepoint_annotations[timepoint_name]
+                if not field_in_ref or new_timepoint_annotations[timepoint_name][ta_field] != ref_timepoint_annotations[timepoint_name][ta_field]:
+                    ta_diff[timepoint_name][ta_field] = new_timepoint_annotations[timepoint_name][ta_field]
+    return diff
 
 def filter_annotations(positions, position_filter):
     """Filter annotation dictionary for an experiment based on some criteria.
