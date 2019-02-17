@@ -328,7 +328,7 @@ def diff_annotations(ref_annotations, new_annotations):
         for timepoint_name in new_timepoint_annotations:
             ta_diff[timepoint_name] = {}
             for ta_diff in new_timepoint_annotations[timepoint_name]:
-                field_in_ref = ta_field not in ref_timepoint_annotations[timepoint_name]
+                field_in_ref = ta_field in ref_timepoint_annotations[timepoint_name]
                 if not field_in_ref or new_timepoint_annotations[timepoint_name][ta_field] != ref_timepoint_annotations[timepoint_name][ta_field]:
                     ta_diff[timepoint_name][ta_field] = new_timepoint_annotations[timepoint_name][ta_field]
     return diff
