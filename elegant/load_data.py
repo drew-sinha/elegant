@@ -269,16 +269,15 @@ def append_annotation_file(annotation_file, position_diff, timepoint_diff):
 
     Parameters:
         annotation_file: path to an existing annotation file
-        position_diff: diff as a dict of "global" per-position annotations to apply to current annotations;
-        timepoint_annotations: diff as an ordered dict mapping timepoint names to
-            annotation dictionaries (which map strings to annotation data)
+        position_diff: diff as a dict of "global" per-position annotations to apply to current annotations
+        timepoint_diff: diff as an ordered dict mapping timepoint names to annotation dictionaries (which map strings to annotation data)
     """
     annotation_file = pathlib.Path(annotation_file)
     annotation_file.parent.mkdir(exist_ok=True)
     while True:
         try:
             latest_annotations = read_annotation_file(annotation_file)
-            merge_annotations(latest_annotations, (position_annotations, timepoint_annotations))
+            merge_annotations(latest_annotations, (position_diff, timepoint_diff))
             with annotation_file.open('wb') as af:
                 fcntl.flock(af, fcntl.LOCK_EX)
                 pickle.dump((dict(latest_annotations[0]), dict(latest_annotations[1])), af)
